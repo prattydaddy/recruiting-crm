@@ -68,6 +68,19 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col bg-[#f8f9fa]">
       <Header />
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <aside className="w-48 bg-white border-r border-gray-200 flex flex-col py-3 px-2 shrink-0">
+          <button className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-900 text-white text-[13px] font-medium">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Prospecting
+          </button>
+        </aside>
+        {/* Main content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
       <FilterBar
         account={account}
         position={position}
@@ -87,6 +100,8 @@ export default function App() {
             {activeCandidate ? <CandidateCard candidate={activeCandidate} /> : null}
           </DragOverlay>
         </DndContext>
+      </div>
+        </div>
       </div>
     </div>
   );
