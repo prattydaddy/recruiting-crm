@@ -135,7 +135,7 @@ export default function App() {
         />
 
         {/* Kanban */}
-        <div className="flex-1 overflow-x-auto px-6 pb-6">
+        <div className="flex-1 overflow-x-auto px-6 pt-4 pb-6">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
             <div className="flex gap-4 h-full">
               {STAGES.map((s) => (
