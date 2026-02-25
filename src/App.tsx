@@ -74,9 +74,9 @@ export default function App() {
       <aside className="w-[220px] bg-white border-r border-gray-200 flex flex-col shrink-0">
         <div className="px-4 py-5 flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-            <span className="text-white text-xs font-bold tracking-tight">RC</span>
+            <span className="text-white text-xs font-bold tracking-tight">K</span>
           </div>
-          <span className="text-[15px] font-semibold text-gray-900 tracking-tight">RecruitingCRM</span>
+          <span className="text-[15px] font-semibold text-gray-900 tracking-tight">KythCRM</span>
         </div>
         <nav className="px-2 mt-1">
           <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-100 text-gray-900 text-[13px] font-medium">
@@ -108,7 +108,7 @@ export default function App() {
 
         {/* Page header */}
         <div className="px-6 pt-6 pb-0">
-          <h1 className="text-3xl font-bold text-gray-900">Prospecting</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Kyth Prospecting</h1>
           <p className="text-sm text-gray-400 mt-1">
             · {candidates.length} candidates · {activeCount} active
           </p>
