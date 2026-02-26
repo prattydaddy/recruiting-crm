@@ -1,14 +1,27 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DndContext, DragOverlay, closestCenter, type DragStartEvent, type DragEndEvent, type DragOverEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import FilterBar from "./components/FilterBar";
 import KanbanColumn from "./components/KanbanColumn";
 import CandidateCard from "./components/CandidateCard";
-import { candidates as initialCandidates } from "./data";
+import { candidates as fallbackCandidates } from "./data";
 import type { Candidate, Stage } from "./types";
 import { STAGES } from "./types";
 
+const API_BASE = "/api/candidates";
+
 export default function App() {
-  const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
+  const [candidates, setCandidates] = useState<Candidate[]>(fallbackCandidates);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(API_BASE)
+      .then((r) => r.json())
+      .then((data: Candidate[]) => {
+        if (data.length > 0) setCandidates(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
   const [account, setAccount] = useState("All");
   const [position, setPosition] = useState("All");
   const [search, setSearch] = useState("");
@@ -61,6 +74,12 @@ export default function App() {
       setCandidates((prev) =>
         prev.map((c) => (c.id === active.id ? { ...c, stage: targetStage } : c))
       );
+      // Persist to API
+      fetch(`${API_BASE}/${active.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage: targetStage }),
+      }).catch(console.error);
     }
   }
 
