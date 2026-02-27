@@ -39,10 +39,17 @@ const MOCK_PROSPECTS: Prospect[] = [
   { id: "p20", name: "Sophie Martin", score: 90, title: "Principal Software Engineer", company: "Bloomberg", tenure: "7y 1m", location: "NYC", connected: true, teamConnected: true, lastContacted: "1d ago", stage: "Replied", linkedinUrl: "https://linkedin.com/in/sophiem", category: "Finance" },
 ];
 
-function ScorePill({ score }: { score: number }) {
-  if (score >= 85) return <span className="inline-flex items-center justify-center min-w-[36px] px-2 py-0.5 rounded-full text-[12px] font-semibold bg-emerald-50 text-emerald-600">{score}</span>;
-  if (score >= 70) return <span className="inline-flex items-center justify-center min-w-[36px] px-2 py-0.5 rounded-full text-[12px] font-semibold bg-amber-50 text-amber-600">{score}</span>;
-  return <span className="inline-flex items-center justify-center min-w-[36px] px-2 py-0.5 rounded-full text-[12px] font-semibold bg-gray-100 text-gray-500">{score}</span>;
+function ScoreBar({ score }: { score: number }) {
+  const color = score >= 85 ? "bg-emerald-400" : score >= 70 ? "bg-amber-400" : "bg-gray-300";
+  const textColor = score >= 85 ? "text-emerald-600" : score >= 70 ? "text-amber-600" : "text-gray-400";
+  return (
+    <div className="flex flex-col items-start gap-1 w-12">
+      <span className={`text-[13px] font-bold tabular-nums ${textColor}`}>{score}</span>
+      <div className="w-full h-[3px] rounded-full bg-gray-100 overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${score}%` }} />
+      </div>
+    </div>
+  );
 }
 
 function StageBadge({ stage }: { stage: string }) {
@@ -55,19 +62,39 @@ function StageBadge({ stage }: { stage: string }) {
   return <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium ${styles[stage] || styles["New"]}`}>{stage}</span>;
 }
 
-function Avatar({ name, company }: { name: string; company: string }) {
-  const companyColors: Record<string, string> = {
-    "Google": "bg-blue-500", "Meta": "bg-blue-600", "Stripe": "bg-violet-500", "Datadog": "bg-purple-500",
-    "Coinbase": "bg-blue-500", "Figma": "bg-rose-400", "Vercel": "bg-gray-900", "Netflix": "bg-red-500",
-    "Cloudflare": "bg-orange-500", "Amazon": "bg-amber-500", "Spotify": "bg-green-500", "OpenAI": "bg-gray-800",
-    "Shopify": "bg-green-600", "MongoDB": "bg-emerald-600", "Notion": "bg-gray-900", "Palantir": "bg-gray-700",
-    "Square": "bg-gray-900", "Twilio": "bg-red-400", "Bloomberg": "bg-gray-800",
-  };
-  const bg = companyColors[company] || "bg-indigo-500";
+// Stable fake photo URLs keyed by prospect id
+const PHOTO_MAP: Record<string, string> = {
+  p1: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face",
+  p2: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face",
+  p3: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=80&h=80&fit=crop&crop=face",
+  p4: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop&crop=face",
+  p5: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop&crop=face",
+  p6: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&h=80&fit=crop&crop=face",
+  p7: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop&crop=face",
+  p8: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=80&h=80&fit=crop&crop=face",
+  p9: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=80&h=80&fit=crop&crop=face",
+  p10: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop&crop=face",
+  p11: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=80&h=80&fit=crop&crop=face",
+  p12: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=80&h=80&fit=crop&crop=face",
+  p13: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=80&h=80&fit=crop&crop=face",
+  p14: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=80&h=80&fit=crop&crop=face",
+  p15: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=80&h=80&fit=crop&crop=face",
+  p16: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=80&h=80&fit=crop&crop=face",
+  p17: "https://images.unsplash.com/photo-1504257432389-52343af06ae3?w=80&h=80&fit=crop&crop=face",
+  p18: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop&crop=face",
+  p19: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=80&h=80&fit=crop&crop=face",
+  p20: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=80&h=80&fit=crop&crop=face",
+};
+
+function Avatar({ name, id }: { name: string; id: string }) {
+  const src = PHOTO_MAP[id];
+  if (src) {
+    return <img src={src} alt={name} className="w-9 h-9 rounded-full object-cover shrink-0" />;
+  }
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2);
   return (
-    <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
-      <span className="text-white text-[11px] font-bold tracking-tight">{initials}</span>
+    <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+      <span className="text-gray-500 text-[11px] font-bold">{initials}</span>
     </div>
   );
 }
@@ -219,14 +246,14 @@ export default function ProspectList() {
                 </td>
                 <td className="py-3.5 pr-4">
                   <div className="flex items-center gap-3">
-                    <Avatar name={p.name} company={p.company} />
+                    <Avatar name={p.name} id={p.id} />
                     <div>
                       <p className="text-[13px] font-semibold text-gray-900 leading-tight">{p.name}</p>
                       <p className="text-[11px] text-gray-400 mt-0.5">{p.category}</p>
                     </div>
                   </div>
                 </td>
-                <td className="py-3.5 pr-4"><ScorePill score={p.score} /></td>
+                <td className="py-3.5 pr-4"><ScoreBar score={p.score} /></td>
                 <td className="py-3.5 pr-4 text-[13px] text-gray-500 max-w-[180px] truncate">{p.title}</td>
                 <td className="py-3.5 pr-4 text-[13px] text-gray-700 font-medium">{p.company}</td>
                 <td className="py-3.5 pr-4 text-[13px] text-emerald-500 font-medium tabular-nums">{p.tenure}</td>
