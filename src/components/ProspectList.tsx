@@ -39,17 +39,9 @@ const MOCK_PROSPECTS: Prospect[] = [
   { id: "p20", name: "Sophie Martin", score: 90, title: "Principal Software Engineer", company: "Bloomberg", tenure: "7y 1m", location: "NYC", connected: true, teamConnected: true, lastContacted: "1d ago", stage: "Replied", linkedinUrl: "https://linkedin.com/in/sophiem", category: "Finance" },
 ];
 
-function ScoreBar({ score }: { score: number }) {
-  const color = score >= 85 ? "bg-emerald-400" : score >= 70 ? "bg-amber-400" : "bg-gray-300";
-  const textColor = score >= 85 ? "text-emerald-600" : score >= 70 ? "text-amber-600" : "text-gray-400";
-  return (
-    <div className="flex flex-col items-start gap-1 w-12">
-      <span className={`text-[13px] font-bold tabular-nums ${textColor}`}>{score}</span>
-      <div className="w-full h-[3px] rounded-full bg-gray-100 overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${score}%` }} />
-      </div>
-    </div>
-  );
+function Score({ score }: { score: number }) {
+  const color = score >= 85 ? "text-emerald-600" : score >= 70 ? "text-amber-600" : "text-gray-400";
+  return <span className={`text-[13px] font-semibold tabular-nums ${color}`}>{score}</span>;
 }
 
 function StageBadge({ stage }: { stage: string }) {
@@ -253,7 +245,7 @@ export default function ProspectList() {
                     </div>
                   </div>
                 </td>
-                <td className="py-3.5 pr-4"><ScoreBar score={p.score} /></td>
+                <td className="py-3.5 pr-4"><Score score={p.score} /></td>
                 <td className="py-3.5 pr-4 text-[13px] text-gray-500 max-w-[180px] truncate">{p.title}</td>
                 <td className="py-3.5 pr-4 text-[13px] text-gray-700 font-medium">{p.company}</td>
                 <td className="py-3.5 pr-4 text-[13px] text-emerald-500 font-medium tabular-nums">{p.tenure}</td>
