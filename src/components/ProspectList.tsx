@@ -1,3 +1,4 @@
+import ProspectModal from "./ProspectModal";
 import { useState, useMemo } from "react";
 
 interface Prospect {
@@ -111,6 +112,7 @@ function MoreIcon() {
 
 export default function ProspectList() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [modalProspect, setModalProspect] = useState<typeof MOCK_PROSPECTS[0] | null>(null);
   const [search, setSearch] = useState("");
   const [scoreFilter, setScoreFilter] = useState<"all" | "85+" | "70+" | "below70">("all");
   const [stageFilter, setStageFilter] = useState<"all" | "New" | "Contacted" | "Replied">("all");
@@ -155,6 +157,7 @@ export default function ProspectList() {
   const replied = MOCK_PROSPECTS.filter(p => p.stage === "Replied").length;
 
   return (
+    <>
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Macro stats */}
       <div className="px-8 pt-5 pb-2">
@@ -232,7 +235,7 @@ export default function ProspectList() {
           </thead>
           <tbody>
             {filtered.map(p => (
-              <tr key={p.id} className={`border-b border-gray-50 hover:bg-gray-50/60 transition-colors cursor-pointer group ${selected.has(p.id) ? "bg-indigo-50/30" : ""}`} onClick={() => toggleOne(p.id)}>
+              <tr key={p.id} className={`border-b border-gray-50 hover:bg-gray-50/60 transition-colors cursor-pointer group ${selected.has(p.id) ? "bg-indigo-50/30" : ""}`} onClick={() => setModalProspect(p)}>
                 <td className="py-3.5 pr-3">
                   <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)} onClick={e => e.stopPropagation()} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer w-3.5 h-3.5" />
                 </td>
@@ -284,5 +287,7 @@ export default function ProspectList() {
         )}
       </div>
     </div>
+      {modalProspect && <ProspectModal prospect={modalProspect} onClose={() => setModalProspect(null)} />}
+    </>
   );
 }
