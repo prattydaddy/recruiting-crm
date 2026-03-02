@@ -1,3 +1,34 @@
+export interface Lead {
+  id: number;
+  firstName: string;
+  lastName: string;
+  headline: string | null;
+  company: string | null;
+  location: string | null;
+  salesNavUrl: string | null;
+  linkedinUrl: string | null;
+  linkedinId: string | null;
+  isOpenProfile: boolean;
+  segment: string;
+  stage: string;
+  createdAt: string;
+}
+
+export interface LeadsResponse {
+  data: Lead[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface LeadsStats {
+  total: number;
+  bySegment: { segment: string; count: number }[];
+  byStage: { stage: string; count: number }[];
+  openProfiles: number;
+}
+
 export type Stage = "sourced" | "screening" | "interview" | "offer" | "hired" | "rejected";
 
 export interface Candidate {

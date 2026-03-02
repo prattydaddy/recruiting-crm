@@ -158,7 +158,7 @@ export default function App() {
             {/* Prospecting header */}
             <div className="px-6 pt-6 pb-0">
               <h1 className="text-3xl font-bold text-gray-900">Prospecting</h1>
-              <p className="text-sm text-gray-400 mt-1">NYC Engineering Talent · 13 Segments</p>
+              <p className="text-sm text-gray-400 mt-1">NYC Engineering Talent · 5 Segments</p>
             </div>
             <ProspectList />
           </>
