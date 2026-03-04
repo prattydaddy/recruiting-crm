@@ -67,15 +67,6 @@ function OpenProfileBadge({ isOpen }: { isOpen: boolean }) {
   );
 }
 
-const SEGMENTS = [
-  { value: "", label: "All segments" },
-  { value: "segment-1a", label: "Segment 1A" },
-  { value: "segment-1b", label: "Segment 1B" },
-  { value: "segment-1c", label: "Segment 1C" },
-  { value: "segment-2b", label: "Segment 2B" },
-  { value: "segment-2c", label: "Segment 2C" },
-];
-
 export default function ProspectList() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<LeadsStats | null>(null);
@@ -87,7 +78,6 @@ export default function ProspectList() {
   const [modalLead, setModalLead] = useState<Lead | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [segmentFilter, setSegmentFilter] = useState("");
   const [stageFilter, setStageFilter] = useState<"" | "New" | "Contacted" | "Replied">("");
   const [scoreFilter, setScoreFilter] = useState<"" | "high" | "medium" | "low">("");
   const [sortByScore, setSortByScore] = useState<"" | "asc" | "desc">("");
@@ -102,7 +92,7 @@ export default function ProspectList() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, segmentFilter, stageFilter]);
+  }, [debouncedSearch, stageFilter]);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -112,7 +102,6 @@ export default function ProspectList() {
         limit: String(LIMIT),
       });
       if (debouncedSearch) params.set("search", debouncedSearch);
-      if (segmentFilter) params.set("segment", segmentFilter);
       if (stageFilter) params.set("stage", stageFilter);
 
       const res = await fetch(`/api/leads?${params}`);
@@ -125,7 +114,7 @@ export default function ProspectList() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, segmentFilter, stageFilter]);
+  }, [page, debouncedSearch, stageFilter]);
 
   useEffect(() => {
     fetchLeads();
@@ -170,11 +159,6 @@ export default function ProspectList() {
     });
   }
 
-  const segmentCounts = useMemo(() => {
-    if (!stats) return "";
-    return stats.bySegment.map((s) => `${s.segment.replace("segment-", "").toUpperCase()}: ${s.count.toLocaleString()}`).join(" · ");
-  }, [stats]);
-
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -182,7 +166,7 @@ export default function ProspectList() {
         <div className="px-8 pt-5 pb-2">
           <p className="text-[14px] text-gray-400">
             {stats
-              ? `· ${stats.total.toLocaleString()} engineers · ${stats.openProfiles.toLocaleString()} open profiles · ${segmentCounts}`
+              ? `· ${stats.total.toLocaleString()} engineers · ${stats.openProfiles.toLocaleString()} open profiles`
               : "· Loading stats..."}
           </p>
         </div>
@@ -240,17 +224,6 @@ export default function ProspectList() {
           )}
 
           {/* Filters */}
-          <select
-            value={segmentFilter}
-            onChange={(e) => setSegmentFilter(e.target.value)}
-            className="px-2.5 py-[7px] text-[12px] bg-white border border-gray-200 rounded-lg text-gray-500 focus:outline-none cursor-pointer"
-          >
-            {SEGMENTS.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
           <select
             value={stageFilter}
             onChange={(e) => setStageFilter(e.target.value as typeof stageFilter)}
@@ -311,9 +284,6 @@ export default function ProspectList() {
                     Score {sortByScore === "desc" ? "↓" : sortByScore === "asc" ? "↑" : ""}
                   </th>
                   <th className="py-3 pr-4 text-left text-[11px] font-medium text-gray-400 uppercase tracking-[0.05em]">
-                    Segment
-                  </th>
-                  <th className="py-3 pr-4 text-left text-[11px] font-medium text-gray-400 uppercase tracking-[0.05em]">
                     Status
                   </th>
                   <th className="py-3 text-center text-[11px] font-medium text-gray-400 uppercase tracking-[0.05em]">
@@ -346,9 +316,6 @@ export default function ProspectList() {
                             <p className="text-[13px] font-semibold text-gray-900 leading-tight">
                               {name}
                             </p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">
-                              {lead.segment.replace("segment-", "").toUpperCase()}
-                            </p>
                           </div>
                         </div>
                       </td>
@@ -372,11 +339,6 @@ export default function ProspectList() {
                         ) : (
                           <span className="text-[11px] text-gray-300">&mdash;</span>
                         )}
-                      </td>
-                      <td className="py-3.5 pr-4">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-600">
-                          {lead.segment.replace("segment-", "").toUpperCase()}
-                        </span>
                       </td>
                       <td className="py-3.5 pr-4">
                         <StageBadge stage={lead.stage} />

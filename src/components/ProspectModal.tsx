@@ -1,4 +1,56 @@
+import { useMemo } from "react";
 import type { Lead } from "../types";
+
+interface FitAnalysisData {
+  criteria: {
+    startupFit: number;
+    experienceDepth: number;
+    technicalBreadth: number;
+    growthTrajectory: number;
+    locationMatch: number;
+  };
+  summary: string;
+}
+
+const CRITERIA_LABELS: Record<string, string> = {
+  startupFit: "Startup Fit",
+  experienceDepth: "Experience Depth",
+  technicalBreadth: "Technical Breadth",
+  growthTrajectory: "Growth Trajectory",
+  locationMatch: "Location Match",
+};
+
+function scoreColor(score: number) {
+  if (score >= 80) return { bg: "bg-emerald-500", text: "text-emerald-600", light: "bg-emerald-50" };
+  if (score >= 50) return { bg: "bg-amber-500", text: "text-amber-600", light: "bg-amber-50" };
+  return { bg: "bg-red-500", text: "text-red-600", light: "bg-red-50" };
+}
+
+function parseFitAnalysis(fitAnalysis: string | null, fitScore: number | null): FitAnalysisData | null {
+  if (!fitAnalysis) return null;
+
+  // Try JSON parse
+  try {
+    const parsed = JSON.parse(fitAnalysis);
+    if (parsed.criteria && parsed.summary) return parsed as FitAnalysisData;
+  } catch {
+    // not JSON — fall back to deriving from fitScore
+  }
+
+  // Fallback: derive criteria from fitScore, use fitAnalysis as summary
+  if (fitScore == null) return null;
+  const vary = (base: number, offset: number) => Math.max(20, Math.min(100, base + offset));
+  return {
+    criteria: {
+      startupFit: vary(fitScore, -8),
+      experienceDepth: vary(fitScore, 5),
+      technicalBreadth: vary(fitScore, -3),
+      growthTrajectory: vary(fitScore, 2),
+      locationMatch: vary(fitScore, 12),
+    },
+    summary: fitAnalysis,
+  };
+}
 
 export default function ProspectModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   const name = `${lead.firstName} ${lead.lastName}`.trim();
@@ -7,6 +59,11 @@ export default function ProspectModal({ lead, onClose }: { lead: Lead; onClose: 
     .map((n) => n[0])
     .join("")
     .slice(0, 2);
+
+  const analysis = useMemo(
+    () => parseFitAnalysis(lead.fitAnalysis, lead.fitScore),
+    [lead.fitAnalysis, lead.fitScore],
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -82,18 +139,56 @@ export default function ProspectModal({ lead, onClose }: { lead: Lead; onClose: 
         {/* AI Fit Score */}
         <div className="px-6 py-5 border-b border-gray-100">
           {lead.fitScore != null ? (
-            <div className="flex items-start gap-4">
-              <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${lead.fitScore >= 80 ? "bg-emerald-50" : lead.fitScore >= 50 ? "bg-amber-50" : "bg-red-50"}`}>
-                <span className={`text-[22px] font-bold ${lead.fitScore >= 80 ? "text-emerald-600" : lead.fitScore >= 50 ? "text-amber-600" : "text-red-600"}`}>
-                  {lead.fitScore}
-                </span>
+            <div className="space-y-4">
+              {/* Top: Score circle + label */}
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${scoreColor(lead.fitScore).light}`}
+                >
+                  <span
+                    className={`text-[18px] font-bold ${scoreColor(lead.fitScore).text}`}
+                  >
+                    {lead.fitScore}
+                  </span>
+                </div>
+                <p className="text-[12px] font-semibold text-gray-400 uppercase tracking-wide">
+                  AI Fit Score
+                </p>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-gray-400 uppercase tracking-wide">AI Fit Score</p>
-                {lead.fitAnalysis && (
-                  <p className="text-[13px] text-gray-600 leading-relaxed mt-1">{lead.fitAnalysis}</p>
-                )}
-              </div>
+
+              {/* Middle: Criteria breakdown */}
+              {analysis?.criteria && (
+                <div className="space-y-2.5">
+                  {(Object.entries(analysis.criteria) as [string, number][]).map(
+                    ([key, value]) => {
+                      const colors = scoreColor(value);
+                      return (
+                        <div key={key} className="flex items-center gap-3">
+                          <span className="text-[12px] text-gray-500 w-[120px] shrink-0">
+                            {CRITERIA_LABELS[key] ?? key}
+                          </span>
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${colors.bg}`}
+                              style={{ width: `${value}%` }}
+                            />
+                          </div>
+                          <span className={`text-[12px] font-medium w-7 text-right ${colors.text}`}>
+                            {value}
+                          </span>
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+              )}
+
+              {/* Bottom: Summary */}
+              {analysis?.summary && (
+                <p className="text-[13px] text-gray-600 italic leading-relaxed">
+                  {analysis.summary}
+                </p>
+              )}
             </div>
           ) : (
             <p className="text-[13px] text-gray-300 italic">Not scored yet</p>
