@@ -12,6 +12,8 @@ export interface Lead {
   segment: string;
   stage: string;
   createdAt: string;
+  fitScore: number | null;
+  fitAnalysis: string | null;
 }
 
 export interface LeadsResponse {

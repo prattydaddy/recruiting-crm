@@ -79,6 +79,27 @@ export default function ProspectModal({ lead, onClose }: { lead: Lead; onClose: 
           </div>
         </div>
 
+        {/* AI Fit Score */}
+        <div className="px-6 py-5 border-b border-gray-100">
+          {lead.fitScore != null ? (
+            <div className="flex items-start gap-4">
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${lead.fitScore >= 80 ? "bg-emerald-50" : lead.fitScore >= 50 ? "bg-amber-50" : "bg-red-50"}`}>
+                <span className={`text-[22px] font-bold ${lead.fitScore >= 80 ? "text-emerald-600" : lead.fitScore >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                  {lead.fitScore}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] text-gray-400 uppercase tracking-wide">AI Fit Score</p>
+                {lead.fitAnalysis && (
+                  <p className="text-[13px] text-gray-600 leading-relaxed mt-1">{lead.fitAnalysis}</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[13px] text-gray-300 italic">Not scored yet</p>
+          )}
+        </div>
+
         {/* Headline section */}
         {lead.headline && (
           <div className="px-6 py-5 border-b border-gray-100">

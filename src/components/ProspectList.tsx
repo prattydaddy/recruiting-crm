@@ -89,6 +89,8 @@ export default function ProspectList() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [segmentFilter, setSegmentFilter] = useState("");
   const [stageFilter, setStageFilter] = useState<"" | "New" | "Contacted" | "Replied">("");
+  const [scoreFilter, setScoreFilter] = useState<"" | "high" | "medium" | "low">("");
+  const [sortByScore, setSortByScore] = useState<"" | "asc" | "desc">("");
   const LIMIT = 50;
 
   // Debounce search input
@@ -137,11 +139,26 @@ export default function ProspectList() {
       .catch(() => {});
   }, []);
 
-  const allSelected = leads.length > 0 && leads.every((l) => selected.has(l.id));
+  const filteredAndSortedLeads = useMemo(() => {
+    let result = leads;
+    if (scoreFilter === "high") result = result.filter((l) => l.fitScore !== null && l.fitScore >= 80);
+    else if (scoreFilter === "medium") result = result.filter((l) => l.fitScore !== null && l.fitScore >= 50 && l.fitScore < 80);
+    else if (scoreFilter === "low") result = result.filter((l) => l.fitScore !== null && l.fitScore < 50);
+    if (sortByScore) {
+      result = [...result].sort((a, b) => {
+        const sa = a.fitScore ?? -1;
+        const sb = b.fitScore ?? -1;
+        return sortByScore === "desc" ? sb - sa : sa - sb;
+      });
+    }
+    return result;
+  }, [leads, scoreFilter, sortByScore]);
+
+  const allSelected = filteredAndSortedLeads.length > 0 && filteredAndSortedLeads.every((l) => selected.has(l.id));
 
   function toggleAll() {
     if (allSelected) setSelected(new Set());
-    else setSelected(new Set(leads.map((l) => l.id)));
+    else setSelected(new Set(filteredAndSortedLeads.map((l) => l.id)));
   }
 
   function toggleOne(id: number) {
@@ -244,6 +261,16 @@ export default function ProspectList() {
             <option value="Contacted">Contacted</option>
             <option value="Replied">Replied</option>
           </select>
+          <select
+            value={scoreFilter}
+            onChange={(e) => setScoreFilter(e.target.value as typeof scoreFilter)}
+            className="px-2.5 py-[7px] text-[12px] bg-white border border-gray-200 rounded-lg text-gray-500 focus:outline-none cursor-pointer"
+          >
+            <option value="">All scores</option>
+            <option value="high">High (80+)</option>
+            <option value="medium">Medium (50-79)</option>
+            <option value="low">Low (&lt;50)</option>
+          </select>
         </div>
 
         {/* Table */}
@@ -277,6 +304,12 @@ export default function ProspectList() {
                   <th className="py-3 pr-4 text-center text-[11px] font-medium text-gray-400 uppercase tracking-[0.05em]">
                     Open Profile
                   </th>
+                  <th
+                    className="py-3 pr-4 text-center text-[11px] font-medium text-gray-400 uppercase tracking-[0.05em] cursor-pointer select-none hover:text-gray-600"
+                    onClick={() => setSortByScore((prev) => prev === "" ? "desc" : prev === "desc" ? "asc" : "")}
+                  >
+                    Score {sortByScore === "desc" ? "↓" : sortByScore === "asc" ? "↑" : ""}
+                  </th>
                   <th className="py-3 pr-4 text-left text-[11px] font-medium text-gray-400 uppercase tracking-[0.05em]">
                     Segment
                   </th>
@@ -289,7 +322,7 @@ export default function ProspectList() {
                 </tr>
               </thead>
               <tbody>
-                {leads.map((lead) => {
+                {filteredAndSortedLeads.map((lead) => {
                   const name = `${lead.firstName} ${lead.lastName}`.trim();
                   return (
                     <tr
@@ -330,6 +363,15 @@ export default function ProspectList() {
                       </td>
                       <td className="py-3.5 pr-4 text-center">
                         <OpenProfileBadge isOpen={lead.isOpenProfile} />
+                      </td>
+                      <td className="py-3.5 pr-4 text-center">
+                        {lead.fitScore != null ? (
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold ${lead.fitScore >= 80 ? "bg-emerald-50 text-emerald-700" : lead.fitScore >= 50 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>
+                            {lead.fitScore}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-gray-300">&mdash;</span>
+                        )}
                       </td>
                       <td className="py-3.5 pr-4">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-600">
