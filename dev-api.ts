@@ -67,7 +67,35 @@ export function devApiPlugin(): Plugin {
             });
           }
 
-          // ---------- /api/leads ----------
+          // ---------- PATCH /api/leads ----------
+          if (pathname === "/api/leads" && req.method === "PATCH") {
+            const body = JSON.parse(await readBody(req));
+            const { linkedinUrl, fitScore, fitAnalysis } = body;
+
+            if (!linkedinUrl) {
+              return json(res, { error: "linkedinUrl is required" }, 400);
+            }
+            if (fitScore === undefined && fitAnalysis === undefined) {
+              return json(res, { error: "At least one of fitScore or fitAnalysis is required" }, 400);
+            }
+
+            let result;
+            if (fitScore !== undefined && fitAnalysis !== undefined) {
+              result = await db`UPDATE leads SET fit_score = ${fitScore}, fit_analysis = ${fitAnalysis} WHERE linkedin_url = ${linkedinUrl} RETURNING id, first_name as "firstName", last_name as "lastName", linkedin_url as "linkedinUrl", fit_score as "fitScore", fit_analysis as "fitAnalysis"`;
+            } else if (fitScore !== undefined) {
+              result = await db`UPDATE leads SET fit_score = ${fitScore} WHERE linkedin_url = ${linkedinUrl} RETURNING id, first_name as "firstName", last_name as "lastName", linkedin_url as "linkedinUrl", fit_score as "fitScore", fit_analysis as "fitAnalysis"`;
+            } else {
+              result = await db`UPDATE leads SET fit_analysis = ${fitAnalysis} WHERE linkedin_url = ${linkedinUrl} RETURNING id, first_name as "firstName", last_name as "lastName", linkedin_url as "linkedinUrl", fit_score as "fitScore", fit_analysis as "fitAnalysis"`;
+            }
+
+            if (result.length === 0) {
+              return json(res, { error: "No lead found with that linkedinUrl" }, 404);
+            }
+
+            return json(res, { ok: true, updated: result[0] });
+          }
+
+          // ---------- GET /api/leads ----------
           if (pathname === "/api/leads" && req.method === "GET") {
             const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
             const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "50")));
