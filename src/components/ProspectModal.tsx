@@ -20,10 +20,22 @@ const CRITERIA_LABELS: Record<string, string> = {
   locationMatch: "Location Match",
 };
 
-function scoreColor(score: number) {
-  if (score >= 80) return { bg: "bg-emerald-500", text: "text-emerald-600", light: "bg-emerald-50" };
-  if (score >= 50) return { bg: "bg-amber-500", text: "text-amber-600", light: "bg-amber-50" };
-  return { bg: "bg-red-500", text: "text-red-600", light: "bg-red-50" };
+function scoreColorClass(score: number) {
+  if (score >= 80) return "score-high";
+  if (score >= 50) return "score-mid";
+  return "score-low";
+}
+
+function barGradient(score: number): string {
+  if (score >= 80) return "linear-gradient(90deg, #818cf8, #7c3aed)";
+  if (score >= 50) return "linear-gradient(90deg, #94a3b8, #64748b)";
+  return "linear-gradient(90deg, #fda4af, #e11d48)";
+}
+
+function ringStrokeColor(score: number): string {
+  if (score >= 80) return "url(#ringGradHigh)";
+  if (score >= 50) return "url(#ringGradMid)";
+  return "url(#ringGradLow)";
 }
 
 function parseFitAnalysis(fitAnalysis: string | null, fitScore: number | null): FitAnalysisData | null {
@@ -50,6 +62,66 @@ function parseFitAnalysis(fitAnalysis: string | null, fitScore: number | null): 
     },
     summary: fitAnalysis,
   };
+}
+
+function RingProgress({ score, size = 64, strokeWidth = 5 }: { score: number; size?: number; strokeWidth?: number }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+
+  return (
+    <svg width={size} height={size} className="shrink-0" style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.08))" }}>
+      <defs>
+        <linearGradient id="ringGradHigh" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#818cf8" />
+          <stop offset="100%" stopColor="#7c3aed" />
+        </linearGradient>
+        <linearGradient id="ringGradMid" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#94a3b8" />
+          <stop offset="100%" stopColor="#64748b" />
+        </linearGradient>
+        <linearGradient id="ringGradLow" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fda4af" />
+          <stop offset="100%" stopColor="#e11d48" />
+        </linearGradient>
+      </defs>
+      {/* Track */}
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="#f3f4f6"
+        strokeWidth={strokeWidth}
+        opacity={0.5}
+      />
+      {/* Progress */}
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={ringStrokeColor(score)}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: "stroke-dashoffset 0.6s ease" }}
+      />
+      {/* Score text */}
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="font-bold"
+        style={{ fontSize: "18px", fill: "#1f2937" }}
+      >
+        {score}
+      </text>
+    </svg>
+  );
 }
 
 export default function ProspectModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
@@ -136,74 +208,71 @@ export default function ProspectModal({ lead, onClose }: { lead: Lead; onClose: 
           </div>
         </div>
 
-        {/* AI Fit Score */}
-        <div className="px-6 py-5 border-b border-gray-100">
-          {lead.fitScore != null ? (
-            <div className="space-y-4">
-              {/* Top: Score circle + label */}
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${scoreColor(lead.fitScore).light}`}
-                >
-                  <span
-                    className={`text-[18px] font-bold ${scoreColor(lead.fitScore).text}`}
-                  >
-                    {lead.fitScore}
-                  </span>
+        {/* AI Fit Score — Premium Card */}
+        <div className="mx-4 my-4 rounded-xl bg-gradient-to-b from-gray-50/80 to-white border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div className="px-6 py-6">
+            {lead.fitScore != null ? (
+              <div className="space-y-5">
+                {/* Score Header: Ring + Label */}
+                <div className="flex items-center gap-4">
+                  <RingProgress score={lead.fitScore} />
+                  <div>
+                    <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">
+                      AI Fit Score
+                    </p>
+                    <p className="text-[13px] text-gray-500 mt-0.5">
+                      {lead.fitScore >= 80
+                        ? "Strong match"
+                        : lead.fitScore >= 50
+                          ? "Moderate match"
+                          : "Weak match"}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-[12px] font-semibold text-gray-400 uppercase tracking-wide">
-                  AI Fit Score
-                </p>
-              </div>
 
-              {/* Middle: Criteria breakdown */}
-              {analysis?.criteria && (
-                <div className="space-y-2.5">
-                  {(Object.entries(analysis.criteria) as [string, number][]).map(
-                    ([key, value]) => {
-                      const colors = scoreColor(value);
-                      return (
+                {/* Criteria Bars */}
+                {analysis?.criteria && (
+                  <div className="space-y-3">
+                    {(Object.entries(analysis.criteria) as [string, number][]).map(
+                      ([key, value]) => (
                         <div key={key} className="flex items-center gap-3">
-                          <span className="text-[12px] text-gray-500 w-[120px] shrink-0">
+                          <span className="text-[11px] text-gray-400 font-medium w-[110px] shrink-0">
                             {CRITERIA_LABELS[key] ?? key}
                           </span>
-                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="flex-1 h-1 bg-gray-100/50 rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${colors.bg}`}
-                              style={{ width: `${value}%` }}
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${value}%`,
+                                background: barGradient(value),
+                                transition: "width 0.5s ease",
+                              }}
                             />
                           </div>
-                          <span className={`text-[12px] font-medium w-7 text-right ${colors.text}`}>
+                          <span className="text-[11px] text-gray-400 font-medium w-6 text-right tabular-nums">
                             {value}
                           </span>
                         </div>
-                      );
-                    },
-                  )}
-                </div>
-              )}
+                      ),
+                    )}
+                  </div>
+                )}
 
-              {/* Bottom: Summary */}
-              {analysis?.summary && (
-                <p className="text-[13px] text-gray-600 italic leading-relaxed">
-                  {analysis.summary}
-                </p>
-              )}
-            </div>
-          ) : (
-            <p className="text-[13px] text-gray-300 italic">Not scored yet</p>
-          )}
-        </div>
-
-        {/* Headline section */}
-        {lead.headline && (
-          <div className="px-6 py-5 border-b border-gray-100">
-            <h3 className="text-[13px] font-semibold text-gray-900 uppercase tracking-wide mb-2">
-              Headline
-            </h3>
-            <p className="text-[13px] text-gray-600 leading-relaxed">{lead.headline}</p>
+                {/* Summary Card */}
+                {analysis?.summary && (
+                  <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-3">
+                    <p className="text-[13px] text-gray-600 leading-relaxed">
+                      <span className="text-gray-300 mr-1.5">✦</span>
+                      {analysis.summary}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-[13px] text-gray-300">Not scored yet</p>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Details */}
         <div className="px-6 py-5">
@@ -220,12 +289,6 @@ export default function ProspectModal({ lead, onClose }: { lead: Lead; onClose: 
               <p className="text-[13px] text-gray-700 font-medium mt-0.5">{lead.location || "—"}</p>
             </div>
             <div>
-              <p className="text-[11px] text-gray-400 uppercase tracking-wide">Segment</p>
-              <p className="text-[13px] text-gray-700 font-medium mt-0.5">
-                {lead.segment.replace("segment-", "").toUpperCase()}
-              </p>
-            </div>
-            <div>
               <p className="text-[11px] text-gray-400 uppercase tracking-wide">Open Profile</p>
               <p className="text-[13px] text-gray-700 font-medium mt-0.5">
                 {lead.isOpenProfile ? (
@@ -238,12 +301,6 @@ export default function ProspectModal({ lead, onClose }: { lead: Lead; onClose: 
             <div>
               <p className="text-[11px] text-gray-400 uppercase tracking-wide">Status</p>
               <p className="text-[13px] text-gray-700 font-medium mt-0.5">{lead.stage}</p>
-            </div>
-            <div>
-              <p className="text-[11px] text-gray-400 uppercase tracking-wide">LinkedIn ID</p>
-              <p className="text-[11px] text-gray-500 font-mono mt-0.5 truncate">
-                {lead.linkedinId || "—"}
-              </p>
             </div>
           </div>
         </div>
