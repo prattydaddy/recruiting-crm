@@ -3,6 +3,8 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const sql = neon(process.env.DATABASE_URL!);
 
+const COLUMNS = `id, first_name as "firstName", last_name as "lastName", headline, company, location, sales_nav_url as "salesNavUrl", linkedin_url as "linkedinUrl", linkedin_id as "linkedinId", is_open_profile as "isOpenProfile", segment, stage, created_at as "createdAt", fit_score as "fitScore", fit_analysis as "fitAnalysis"`;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, PATCH, OPTIONS");
@@ -51,41 +53,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const search = (req.query.search as string) || "";
   const segment = (req.query.segment as string) || "";
   const stage = (req.query.stage as string) || "";
+  const scoreFilter = (req.query.score as string) || "";
+  const sortBy = (req.query.sort as string) || "";
 
   try {
-    // Build dynamic query using tagged template approach
-    let countResult;
-    let dataResult;
+    const conditions: string[] = [];
+    const params: (string | number)[] = [];
+    let paramIdx = 1;
 
-    if (search && segment && stage) {
+    if (search) {
       const s = `%${search}%`;
-      countResult = await sql`SELECT COUNT(*) as total FROM leads WHERE (first_name ILIKE ${s} OR last_name ILIKE ${s} OR headline ILIKE ${s} OR company ILIKE ${s} OR location ILIKE ${s}) AND segment = ${segment} AND stage = ${stage}`;
-      dataResult = await sql`SELECT id, first_name as "firstName", last_name as "lastName", headline, company, location, sales_nav_url as "salesNavUrl", linkedin_url as "linkedinUrl", linkedin_id as "linkedinId", is_open_profile as "isOpenProfile", segment, stage, created_at as "createdAt", fit_score as "fitScore", fit_analysis as "fitAnalysis" FROM leads WHERE (first_name ILIKE ${s} OR last_name ILIKE ${s} OR headline ILIKE ${s} OR company ILIKE ${s} OR location ILIKE ${s}) AND segment = ${segment} AND stage = ${stage} ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`;
-    } else if (search && segment) {
-      const s = `%${search}%`;
-      countResult = await sql`SELECT COUNT(*) as total FROM leads WHERE (first_name ILIKE ${s} OR last_name ILIKE ${s} OR headline ILIKE ${s} OR company ILIKE ${s} OR location ILIKE ${s}) AND segment = ${segment}`;
-      dataResult = await sql`SELECT id, first_name as "firstName", last_name as "lastName", headline, company, location, sales_nav_url as "salesNavUrl", linkedin_url as "linkedinUrl", linkedin_id as "linkedinId", is_open_profile as "isOpenProfile", segment, stage, created_at as "createdAt", fit_score as "fitScore", fit_analysis as "fitAnalysis" FROM leads WHERE (first_name ILIKE ${s} OR last_name ILIKE ${s} OR headline ILIKE ${s} OR company ILIKE ${s} OR location ILIKE ${s}) AND segment = ${segment} ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`;
-    } else if (search && stage) {
-      const s = `%${search}%`;
-      countResult = await sql`SELECT COUNT(*) as total FROM leads WHERE (first_name ILIKE ${s} OR last_name ILIKE ${s} OR headline ILIKE ${s} OR company ILIKE ${s} OR location ILIKE ${s}) AND stage = ${stage}`;
-      dataResult = await sql`SELECT id, first_name as "firstName", last_name as "lastName", headline, company, location, sales_nav_url as "salesNavUrl", linkedin_url as "linkedinUrl", linkedin_id as "linkedinId", is_open_profile as "isOpenProfile", segment, stage, created_at as "createdAt", fit_score as "fitScore", fit_analysis as "fitAnalysis" FROM leads WHERE (first_name ILIKE ${s} OR last_name ILIKE ${s} OR headline ILIKE ${s} OR company ILIKE ${s} OR location ILIKE ${s}) AND stage = ${stage} ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`;
-    } else if (segment && stage) {
-      countResult = await sql`SELECT COUNT(*) as total FROM leads WHERE segment = ${segment} AND stage = ${stage}`;
-      dataResult = await sql`SELECT id, first_name as "firstName", last_name as "lastName", headline, company, location, sales_nav_url as "salesNavUrl", linkedin_url as "linkedinUrl", linkedin_id as "linkedinId", is_open_profile as "isOpenProfile", segment, stage, created_at as "createdAt", fit_score as "fitScore", fit_analysis as "fitAnalysis" FROM leads WHERE segment = ${segment} AND stage = ${stage} ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`;
-    } else if (search) {
-      const s = `%${search}%`;
-      countResult = await sql`SELECT COUNT(*) as total FROM leads WHERE (first_name ILIKE ${s} OR last_name ILIKE ${s} OR headline ILIKE ${s} OR company ILIKE ${s} OR location ILIKE ${s})`;
-      dataResult = await sql`SELECT id, first_name as "firstName", last_name as "lastName", headline, company, location, sales_nav_url as "salesNavUrl", linkedin_url as "linkedinUrl", linkedin_id as "linkedinId", is_open_profile as "isOpenProfile", segment, stage, created_at as "createdAt", fit_score as "fitScore", fit_analysis as "fitAnalysis" FROM leads WHERE (first_name ILIKE ${s} OR last_name ILIKE ${s} OR headline ILIKE ${s} OR company ILIKE ${s} OR location ILIKE ${s}) ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`;
-    } else if (segment) {
-      countResult = await sql`SELECT COUNT(*) as total FROM leads WHERE segment = ${segment}`;
-      dataResult = await sql`SELECT id, first_name as "firstName", last_name as "lastName", headline, company, location, sales_nav_url as "salesNavUrl", linkedin_url as "linkedinUrl", linkedin_id as "linkedinId", is_open_profile as "isOpenProfile", segment, stage, created_at as "createdAt", fit_score as "fitScore", fit_analysis as "fitAnalysis" FROM leads WHERE segment = ${segment} ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`;
-    } else if (stage) {
-      countResult = await sql`SELECT COUNT(*) as total FROM leads WHERE stage = ${stage}`;
-      dataResult = await sql`SELECT id, first_name as "firstName", last_name as "lastName", headline, company, location, sales_nav_url as "salesNavUrl", linkedin_url as "linkedinUrl", linkedin_id as "linkedinId", is_open_profile as "isOpenProfile", segment, stage, created_at as "createdAt", fit_score as "fitScore", fit_analysis as "fitAnalysis" FROM leads WHERE stage = ${stage} ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`;
-    } else {
-      countResult = await sql`SELECT COUNT(*) as total FROM leads`;
-      dataResult = await sql`SELECT id, first_name as "firstName", last_name as "lastName", headline, company, location, sales_nav_url as "salesNavUrl", linkedin_url as "linkedinUrl", linkedin_id as "linkedinId", is_open_profile as "isOpenProfile", segment, stage, created_at as "createdAt", fit_score as "fitScore", fit_analysis as "fitAnalysis" FROM leads ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`;
+      conditions.push(`(first_name ILIKE $${paramIdx} OR last_name ILIKE $${paramIdx} OR headline ILIKE $${paramIdx} OR company ILIKE $${paramIdx} OR location ILIKE $${paramIdx})`);
+      params.push(s);
+      paramIdx++;
     }
+    if (stage) {
+      conditions.push(`stage = $${paramIdx}`);
+      params.push(stage);
+      paramIdx++;
+    }
+    if (segment) {
+      conditions.push(`segment = $${paramIdx}`);
+      params.push(segment);
+      paramIdx++;
+    }
+
+    // Score filter
+    if (scoreFilter === "yes") conditions.push(`fit_score >= 65`);
+    else if (scoreFilter === "lean_yes") conditions.push(`fit_score >= 50 AND fit_score < 65`);
+    else if (scoreFilter === "lean_no") conditions.push(`fit_score >= 35 AND fit_score < 50`);
+    else if (scoreFilter === "no") conditions.push(`fit_score < 35`);
+    else if (scoreFilter === "unscored") conditions.push(`fit_score IS NULL`);
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    // Sort
+    let orderClause = "ORDER BY id DESC";
+    if (sortBy === "score_desc") orderClause = "ORDER BY fit_score DESC NULLS LAST";
+    else if (sortBy === "score_asc") orderClause = "ORDER BY fit_score ASC NULLS LAST";
+
+    const countQuery = `SELECT COUNT(*) as total FROM leads ${whereClause}`;
+    const dataQuery = `SELECT ${COLUMNS} FROM leads ${whereClause} ${orderClause} LIMIT ${limit} OFFSET ${offset}`;
+
+    const [countResult, dataResult] = await Promise.all([
+      sql(countQuery, params),
+      sql(dataQuery, params),
+    ]);
 
     const total = parseInt(countResult[0].total);
 
