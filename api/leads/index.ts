@@ -96,8 +96,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const dataQuery = `SELECT ${COLUMNS} FROM leads ${whereClause} ${orderClause} LIMIT ${limit} OFFSET ${offset}`;
 
     const [countResult, dataResult] = await Promise.all([
-      sql(countQuery, params),
-      sql(dataQuery, params),
+      sql.query(countQuery, params),
+      sql.query(dataQuery, params),
     ]);
 
     const total = parseInt(countResult[0].total);
