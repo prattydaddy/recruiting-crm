@@ -79,7 +79,7 @@ export default function ProspectList() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<"" | "New" | "Contacted" | "Replied">("");
-  const [scoreFilter, setScoreFilter] = useState<"" | "high" | "medium" | "low">("");
+  const [scoreFilter, setScoreFilter] = useState<"" | "yes" | "lean_yes" | "lean_no" | "no" | "unscored">("");
   const [sortByScore, setSortByScore] = useState<"" | "asc" | "desc">("");
   const LIMIT = 50;
 
@@ -92,7 +92,7 @@ export default function ProspectList() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, stageFilter]);
+  }, [debouncedSearch, stageFilter, scoreFilter, sortByScore]);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -103,6 +103,8 @@ export default function ProspectList() {
       });
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (stageFilter) params.set("stage", stageFilter);
+      if (scoreFilter) params.set("score", scoreFilter);
+      if (sortByScore) params.set("sort", sortByScore === "desc" ? "score_desc" : "score_asc");
 
       const res = await fetch(`/api/leads?${params}`);
       const data: LeadsResponse = await res.json();
@@ -114,7 +116,7 @@ export default function ProspectList() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, stageFilter]);
+  }, [page, debouncedSearch, stageFilter, scoreFilter, sortByScore]);
 
   useEffect(() => {
     fetchLeads();
@@ -128,20 +130,8 @@ export default function ProspectList() {
       .catch(() => {});
   }, []);
 
-  const filteredAndSortedLeads = useMemo(() => {
-    let result = leads;
-    if (scoreFilter === "high") result = result.filter((l) => l.fitScore !== null && l.fitScore >= 80);
-    else if (scoreFilter === "medium") result = result.filter((l) => l.fitScore !== null && l.fitScore >= 50 && l.fitScore < 80);
-    else if (scoreFilter === "low") result = result.filter((l) => l.fitScore !== null && l.fitScore < 50);
-    if (sortByScore) {
-      result = [...result].sort((a, b) => {
-        const sa = a.fitScore ?? -1;
-        const sb = b.fitScore ?? -1;
-        return sortByScore === "desc" ? sb - sa : sa - sb;
-      });
-    }
-    return result;
-  }, [leads, scoreFilter, sortByScore]);
+  // No more client-side filtering — API handles it all
+  const filteredAndSortedLeads = leads;
 
   const allSelected = filteredAndSortedLeads.length > 0 && filteredAndSortedLeads.every((l) => selected.has(l.id));
 
@@ -240,9 +230,11 @@ export default function ProspectList() {
             className="px-2.5 py-[7px] text-[12px] bg-white border border-gray-200 rounded-lg text-gray-500 focus:outline-none cursor-pointer"
           >
             <option value="">All scores</option>
-            <option value="high">High (80+)</option>
-            <option value="medium">Medium (50-79)</option>
-            <option value="low">Low (&lt;50)</option>
+            <option value="yes">Yes (65+)</option>
+            <option value="lean_yes">Lean Yes (50-64)</option>
+            <option value="lean_no">Lean No (35-49)</option>
+            <option value="no">No (&lt;35)</option>
+            <option value="unscored">Unscored</option>
           </select>
         </div>
 
