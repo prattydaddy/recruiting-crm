@@ -141,9 +141,9 @@ function Tooltip({ text, children }: { text: string; children: React.ReactNode }
     >
       {children}
       {show && text && (
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-[11px] leading-relaxed text-gray-100 bg-gray-800 rounded-lg shadow-lg whitespace-normal max-w-[280px] z-50 pointer-events-none">
+        <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2.5 px-3 py-2 text-[11px] leading-relaxed text-gray-100 bg-gray-800 rounded-lg shadow-lg whitespace-normal w-[220px] z-50 pointer-events-none">
           {text}
-          <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-gray-800" />
+          <span className="absolute right-full top-1/2 -translate-y-1/2 -mr-px border-4 border-transparent border-r-gray-800" />
         </span>
       )}
     </span>
