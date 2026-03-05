@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { Lead } from "../types";
 
 /**
@@ -133,18 +134,34 @@ function parseAnalysis(fitAnalysis: string | null, fitScore: number | null): Par
 
 function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
   const [show, setShow] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const ref = useRef<HTMLSpanElement>(null);
+
+  const handleEnter = useCallback(() => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setPos({ top: rect.top + rect.height / 2, left: rect.right + 10 });
+    }
+    setShow(true);
+  }, []);
+
   return (
     <span
+      ref={ref}
       className="relative inline-flex"
-      onMouseEnter={() => setShow(true)}
+      onMouseEnter={handleEnter}
       onMouseLeave={() => setShow(false)}
     >
       {children}
-      {show && text && (
-        <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2.5 px-3 py-2 text-[11px] leading-relaxed text-gray-100 bg-gray-800 rounded-lg shadow-lg whitespace-normal w-[220px] z-50 pointer-events-none">
+      {show && text && createPortal(
+        <span
+          className="fixed px-3 py-2 text-[11px] leading-relaxed text-gray-100 bg-gray-800 rounded-lg shadow-lg whitespace-normal w-[220px] pointer-events-none"
+          style={{ top: pos.top, left: pos.left, transform: "translateY(-50%)", zIndex: 9999 }}
+        >
           {text}
           <span className="absolute right-full top-1/2 -translate-y-1/2 -mr-px border-4 border-transparent border-r-gray-800" />
-        </span>
+        </span>,
+        document.body
       )}
     </span>
   );
