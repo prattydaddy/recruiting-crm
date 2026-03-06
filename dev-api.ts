@@ -142,6 +142,36 @@ export function devApiPlugin(): Plugin {
             return json(res, { data: dataResult, total, page, limit, totalPages: Math.ceil(total / limit) });
           }
 
+          // ---------- GET /api/leads/feedback ----------
+          if (pathname === "/api/leads/feedback" && req.method === "GET") {
+            const leadId = parseInt(url.searchParams.get("leadId") || "");
+            if (!leadId) return json(res, { error: "leadId is required" }, 400);
+
+            const rows = await db`
+              SELECT id, lead_id as "leadId", feedback, rating, created_at as "createdAt"
+              FROM lead_feedback
+              WHERE lead_id = ${leadId}
+              ORDER BY created_at DESC
+            `;
+            return json(res, { data: rows });
+          }
+
+          // ---------- POST /api/leads/feedback ----------
+          if (pathname === "/api/leads/feedback" && req.method === "POST") {
+            const body = JSON.parse(await readBody(req));
+            const { leadId, feedback, rating } = body;
+            if (!leadId || !feedback) {
+              return json(res, { error: "leadId and feedback are required" }, 400);
+            }
+
+            const rows = await db`
+              INSERT INTO lead_feedback (lead_id, feedback, rating)
+              VALUES (${leadId}, ${feedback}, ${rating || null})
+              RETURNING id, lead_id as "leadId", feedback, rating, created_at as "createdAt"
+            `;
+            return json(res, { ok: true, data: rows[0] }, 201);
+          }
+
           // ---------- /api/candidates ----------
           if (pathname === "/api/candidates" && req.method === "GET") {
             const rows = await db`SELECT id, name, position, company, linkedin_url as "linkedinUrl", location, experience_years as "experienceYears", fit_score as "fitScore", date_added as "dateAdded", stage, account, target_position as "targetPosition" FROM candidates ORDER BY date_added DESC`;

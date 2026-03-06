@@ -1,4 +1,5 @@
 import ProspectModal from "./ProspectModal";
+import { FeedbackButton } from "./FeedbackPopup";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import type { Lead, LeadsResponse, LeadsStats } from "../types";
 
@@ -81,7 +82,26 @@ export default function ProspectList() {
   const [stageFilter, setStageFilter] = useState<"" | "New" | "Contacted" | "Replied">("");
   const [scoreFilter, setScoreFilter] = useState<"" | "yes" | "lean_yes" | "lean_no" | "no" | "unscored">("");
   const [sortByScore, setSortByScore] = useState<"" | "asc" | "desc">("");
+  const [feedbackCounts, setFeedbackCounts] = useState<Record<number, number>>({});
   const LIMIT = 50;
+
+  // Fetch feedback counts for visible leads
+  const fetchFeedbackCounts = useCallback(async (leadIds: number[]) => {
+    if (leadIds.length === 0) return;
+    try {
+      const counts: Record<number, number> = {};
+      await Promise.all(
+        leadIds.map(async (id) => {
+          const res = await fetch(`/api/leads/feedback?leadId=${id}`);
+          const data = await res.json();
+          counts[id] = (data.data || []).length;
+        })
+      );
+      setFeedbackCounts((prev) => ({ ...prev, ...counts }));
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Debounce search input
   useEffect(() => {
@@ -121,6 +141,13 @@ export default function ProspectList() {
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
+
+  // Fetch feedback counts when leads load
+  useEffect(() => {
+    if (leads.length > 0) {
+      fetchFeedbackCounts(leads.map((l) => l.id));
+    }
+  }, [leads, fetchFeedbackCounts]);
 
   // Fetch stats once on mount
   useEffect(() => {
@@ -305,8 +332,14 @@ export default function ProspectList() {
                         <div className="flex items-center gap-3">
                           <Avatar name={name} />
                           <div>
-                            <p className="text-[13px] font-semibold text-gray-900 leading-tight">
+                            <p className="text-[13px] font-semibold text-gray-900 leading-tight flex items-center gap-1">
                               {name}
+                              <FeedbackButton
+                                leadId={lead.id}
+                                leadName={name}
+                                feedbackCount={feedbackCounts[lead.id] || 0}
+                                onCountChange={() => fetchFeedbackCounts([lead.id])}
+                              />
                             </p>
                           </div>
                         </div>

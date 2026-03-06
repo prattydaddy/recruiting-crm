@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { Lead } from "../types";
+import { FeedbackButton } from "./FeedbackPopup";
 
 /**
  * New scoring format from Nate's framework:
@@ -278,7 +279,10 @@ export default function ProspectModal({ lead, onClose }: { lead: Lead; onClose: 
               <span className="text-gray-500 text-lg font-bold">{initials}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-[17px] font-bold text-gray-900">{name}</h2>
+              <h2 className="text-[17px] font-bold text-gray-900 flex items-center gap-1.5">
+                {name}
+                <FeedbackButton leadId={lead.id} leadName={name} />
+              </h2>
               {lead.headline && <p className="text-[13px] text-gray-500 mt-0.5 line-clamp-2">{lead.headline}</p>}
               <p className="text-[13px] text-gray-400 mt-0.5">
                 {[lead.company, lead.location].filter(Boolean).join(" · ") || "—"}
