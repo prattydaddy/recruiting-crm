@@ -57,5 +57,15 @@ export const STAGES: { key: Stage; label: string; color: string }[] = [
   { key: "rejected", label: "Rejected", color: "#ef4444" },
 ];
 
+export interface Campaign {
+  id: number;
+  name: string;
+  description: string | null;
+  status: string;
+  leadCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const ACCOUNTS = ["All", "Acme Corp", "TechStart Inc", "Nexus AI", "Pinnacle Labs"];
 export const POSITIONS = ["All", "GTM Engineer", "Full Stack Dev", "DevOps Engineer", "VP Sales", "Account Executive", "SDR", "Senior Designer", "UX Researcher"];

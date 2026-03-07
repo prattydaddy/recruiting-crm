@@ -172,6 +172,142 @@ export function devApiPlugin(): Plugin {
             return json(res, { ok: true, data: rows[0] }, 201);
           }
 
+          // ---------- GET /api/campaigns ----------
+          if (pathname === "/api/campaigns" && req.method === "GET") {
+            const rows = await db`
+              SELECT c.id, c.name, c.description, c.status,
+                     c.created_at as "createdAt", c.updated_at as "updatedAt",
+                     COALESCE(cl.lead_count, 0)::int as "leadCount"
+              FROM campaigns c
+              LEFT JOIN (
+                SELECT campaign_id, COUNT(*) as lead_count
+                FROM campaign_leads
+                GROUP BY campaign_id
+              ) cl ON cl.campaign_id = c.id
+              ORDER BY c.created_at DESC
+            `;
+            return json(res, { data: rows });
+          }
+
+          // ---------- POST /api/campaigns ----------
+          if (pathname === "/api/campaigns" && req.method === "POST") {
+            const body = JSON.parse(await readBody(req));
+            const { name, description } = body;
+            if (!name) return json(res, { error: "name is required" }, 400);
+
+            const rows = await db`
+              INSERT INTO campaigns (name, description)
+              VALUES (${name}, ${description || null})
+              RETURNING id, name, description, status, created_at as "createdAt", updated_at as "updatedAt"
+            `;
+            return json(res, { data: { ...rows[0], leadCount: 0 } }, 201);
+          }
+
+          // ---------- PATCH /api/campaigns ----------
+          if (pathname === "/api/campaigns" && req.method === "PATCH") {
+            const body = JSON.parse(await readBody(req));
+            const { id, name, description, status } = body;
+            if (!id) return json(res, { error: "id is required" }, 400);
+
+            const sets: string[] = [];
+            const params: (string | number)[] = [];
+            let paramIdx = 1;
+
+            if (name !== undefined) { sets.push(`name = $${paramIdx}`); params.push(name); paramIdx++; }
+            if (description !== undefined) { sets.push(`description = $${paramIdx}`); params.push(description); paramIdx++; }
+            if (status !== undefined) { sets.push(`status = $${paramIdx}`); params.push(status); paramIdx++; }
+            sets.push("updated_at = NOW()");
+
+            if (sets.length === 1) return json(res, { error: "No fields to update" }, 400);
+
+            const query = `UPDATE campaigns SET ${sets.join(", ")} WHERE id = $${paramIdx} RETURNING id, name, description, status, created_at as "createdAt", updated_at as "updatedAt"`;
+            params.push(id);
+
+            const rows = await db.query(query, params);
+            if (rows.length === 0) return json(res, { error: "Campaign not found" }, 404);
+            return json(res, { data: rows[0] });
+          }
+
+          // ---------- DELETE /api/campaigns ----------
+          if (pathname === "/api/campaigns" && req.method === "DELETE") {
+            const body = JSON.parse(await readBody(req));
+            const { id } = body;
+            if (!id) return json(res, { error: "id is required" }, 400);
+            await db`DELETE FROM campaigns WHERE id = ${id}`;
+            return json(res, { ok: true });
+          }
+
+          // ---------- GET /api/campaigns/leads ----------
+          if (pathname === "/api/campaigns/leads" && req.method === "GET") {
+            const campaignId = parseInt(url.searchParams.get("campaignId") || "");
+            if (!campaignId) return json(res, { error: "campaignId is required" }, 400);
+
+            const rows = await db`
+              SELECT l.id, l.first_name as "firstName", l.last_name as "lastName", l.headline, l.company, l.location,
+                     l.sales_nav_url as "salesNavUrl", l.linkedin_url as "linkedinUrl", l.linkedin_id as "linkedinId",
+                     l.is_open_profile as "isOpenProfile", l.segment, l.stage, l.created_at as "createdAt",
+                     l.fit_score as "fitScore", l.fit_analysis as "fitAnalysis", cl.added_at as "addedAt"
+              FROM campaign_leads cl
+              JOIN leads l ON l.id = cl.lead_id
+              WHERE cl.campaign_id = ${campaignId}
+              ORDER BY cl.added_at DESC
+            `;
+            return json(res, { data: rows });
+          }
+
+          // ---------- POST /api/campaigns/leads ----------
+          if (pathname === "/api/campaigns/leads" && req.method === "POST") {
+            const body = JSON.parse(await readBody(req));
+            const { campaignId, leadIds, filters } = body;
+            if (!campaignId) return json(res, { error: "campaignId is required" }, 400);
+
+            let resolvedLeadIds: number[] = leadIds || [];
+
+            if (filters && !leadIds) {
+              const conditions: string[] = [];
+              const fParams: (string | number)[] = [];
+              let fIdx = 1;
+
+              if (filters.search) {
+                conditions.push(`(first_name ILIKE $${fIdx} OR last_name ILIKE $${fIdx} OR headline ILIKE $${fIdx} OR company ILIKE $${fIdx} OR location ILIKE $${fIdx})`);
+                fParams.push(`%${filters.search}%`);
+                fIdx++;
+              }
+              if (filters.stage) { conditions.push(`stage = $${fIdx}`); fParams.push(filters.stage); fIdx++; }
+              if (filters.segment) { conditions.push(`segment = $${fIdx}`); fParams.push(filters.segment); fIdx++; }
+              if (filters.score === "yes") conditions.push(`fit_score >= 65`);
+              else if (filters.score === "lean_yes") conditions.push(`fit_score >= 50 AND fit_score < 65`);
+              else if (filters.score === "lean_no") conditions.push(`fit_score >= 35 AND fit_score < 50`);
+              else if (filters.score === "no") conditions.push(`fit_score < 35`);
+              else if (filters.score === "unscored") conditions.push(`fit_score IS NULL`);
+
+              const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+              const rows = await db.query(`SELECT id FROM leads ${whereClause}`, fParams);
+              resolvedLeadIds = rows.map((r: { id: number }) => r.id);
+            }
+
+            if (resolvedLeadIds.length === 0) return json(res, { error: "No lead IDs to add" }, 400);
+
+            const values = resolvedLeadIds.map((_: number, i: number) => `($1, $${i + 2})`).join(", ");
+            const query = `INSERT INTO campaign_leads (campaign_id, lead_id) VALUES ${values} ON CONFLICT (campaign_id, lead_id) DO NOTHING`;
+            await db.query(query, [campaignId, ...resolvedLeadIds]);
+
+            return json(res, { ok: true, added: resolvedLeadIds.length }, 201);
+          }
+
+          // ---------- DELETE /api/campaigns/leads ----------
+          if (pathname === "/api/campaigns/leads" && req.method === "DELETE") {
+            const body = JSON.parse(await readBody(req));
+            const { campaignId, leadIds } = body;
+            if (!campaignId || !leadIds?.length) return json(res, { error: "campaignId and leadIds required" }, 400);
+
+            const placeholders = leadIds.map((_: number, i: number) => `$${i + 2}`).join(", ");
+            const query = `DELETE FROM campaign_leads WHERE campaign_id = $1 AND lead_id IN (${placeholders})`;
+            await db.query(query, [campaignId, ...leadIds]);
+
+            return json(res, { ok: true });
+          }
+
           // ---------- /api/candidates ----------
           if (pathname === "/api/candidates" && req.method === "GET") {
             const rows = await db`SELECT id, name, position, company, linkedin_url as "linkedinUrl", location, experience_years as "experienceYears", fit_score as "fitScore", date_added as "dateAdded", stage, account, target_position as "targetPosition" FROM candidates ORDER BY date_added DESC`;

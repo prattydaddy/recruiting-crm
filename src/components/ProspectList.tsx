@@ -1,6 +1,7 @@
 import ProspectModal from "./ProspectModal";
+import CampaignPopup from "./CampaignPopup";
 import { FeedbackButton } from "./FeedbackPopup";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Lead, LeadsResponse, LeadsStats } from "../types";
 
 function StageBadge({ stage }: { stage: string }) {
@@ -83,6 +84,8 @@ export default function ProspectList() {
   const [scoreFilter, setScoreFilter] = useState<"" | "yes" | "lean_yes" | "lean_no" | "no" | "unscored">("");
   const [sortByScore, setSortByScore] = useState<"" | "asc" | "desc">("");
   const [feedbackCounts, setFeedbackCounts] = useState<Record<number, number>>({});
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
+  const [showCampaignPopup, setShowCampaignPopup] = useState(false);
   const LIMIT = 50;
 
   // Fetch feedback counts for visible leads
@@ -160,20 +163,60 @@ export default function ProspectList() {
   // No more client-side filtering — API handles it all
   const filteredAndSortedLeads = leads;
 
-  const allSelected = filteredAndSortedLeads.length > 0 && filteredAndSortedLeads.every((l) => selected.has(l.id));
+  const pageSelected = filteredAndSortedLeads.length > 0 && filteredAndSortedLeads.every((l) => selected.has(l.id));
+  const allSelected = pageSelected;
 
   function toggleAll() {
-    if (allSelected) setSelected(new Set());
-    else setSelected(new Set(filteredAndSortedLeads.map((l) => l.id)));
+    if (allSelected) {
+      setSelected(new Set());
+      setSelectAllMatching(false);
+    } else {
+      setSelected(new Set(filteredAndSortedLeads.map((l) => l.id)));
+      setSelectAllMatching(false);
+    }
   }
 
   function toggleOne(id: number) {
+    setSelectAllMatching(false);
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  }
+
+  // Reset selectAllMatching when filters change
+  useEffect(() => {
+    setSelectAllMatching(false);
+  }, [debouncedSearch, stageFilter, scoreFilter, sortByScore]);
+
+  const effectiveSelectedCount = selectAllMatching ? total : selected.size;
+
+  async function handleAddToCampaign(campaignId: number) {
+    if (selectAllMatching) {
+      // Send filters to server so it resolves all matching lead IDs
+      const filters: Record<string, string> = {};
+      if (debouncedSearch) filters.search = debouncedSearch;
+      if (stageFilter) filters.stage = stageFilter;
+      if (scoreFilter) filters.score = scoreFilter;
+
+      const res = await fetch("/api/campaigns/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId, filters }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+    } else {
+      const res = await fetch("/api/campaigns/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId, leadIds: Array.from(selected) }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+    }
+    setSelected(new Set());
+    setSelectAllMatching(false);
   }
 
   return (
@@ -228,9 +271,20 @@ export default function ProspectList() {
           <div className="flex-1" />
 
           {/* Bulk actions */}
-          {selected.size > 0 && (
+          {(selected.size > 0 || selectAllMatching) && (
             <div className="flex items-center gap-2 mr-2">
-              <span className="text-[13px] text-gray-400">{selected.size} selected</span>
+              <span className="text-[13px] text-gray-400">
+                {selectAllMatching ? total.toLocaleString() : selected.size} selected
+              </span>
+              <button
+                onClick={() => setShowCampaignPopup(true)}
+                className="px-3 py-1.5 text-[12px] font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add to Sequence
+              </button>
               <button className="px-3 py-1.5 text-[12px] font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -264,6 +318,34 @@ export default function ProspectList() {
             <option value="unscored">Unscored</option>
           </select>
         </div>
+
+        {/* Select all matching banner */}
+        {pageSelected && !selectAllMatching && total > LIMIT && (
+          <div className="mx-8 px-4 py-2 bg-indigo-50 rounded-lg text-center">
+            <span className="text-[13px] text-indigo-700">
+              All {Math.min(LIMIT, leads.length)} on this page selected.{" "}
+              <button
+                onClick={() => setSelectAllMatching(true)}
+                className="font-medium underline hover:text-indigo-900 transition-colors"
+              >
+                Select all {total.toLocaleString()} matching leads?
+              </button>
+            </span>
+          </div>
+        )}
+        {selectAllMatching && (
+          <div className="mx-8 px-4 py-2 bg-emerald-50 rounded-lg text-center">
+            <span className="text-[13px] text-emerald-700">
+              All {total.toLocaleString()} matching leads selected.{" "}
+              <button
+                onClick={() => { setSelectAllMatching(false); setSelected(new Set()); }}
+                className="font-medium underline hover:text-emerald-900 transition-colors"
+              >
+                Clear selection
+              </button>
+            </span>
+          </div>
+        )}
 
         {/* Table */}
         <div className="flex-1 overflow-auto px-8">
@@ -426,6 +508,13 @@ export default function ProspectList() {
         </div>
       </div>
       {modalLead && <ProspectModal lead={modalLead} onClose={() => setModalLead(null)} />}
+      {showCampaignPopup && (
+        <CampaignPopup
+          leadCount={effectiveSelectedCount}
+          onClose={() => setShowCampaignPopup(false)}
+          onAdd={handleAddToCampaign}
+        />
+      )}
     </>
   );
 }
