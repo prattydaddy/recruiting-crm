@@ -69,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
         const query = `SELECT id FROM leads ${whereClause}`;
         const rows = await sql.query(query, params);
-        resolvedLeadIds = rows.map((r: { id: number }) => r.id);
+        resolvedLeadIds = rows.map((r: Record<string, number>) => r.id);
       }
 
       if (resolvedLeadIds.length === 0) {

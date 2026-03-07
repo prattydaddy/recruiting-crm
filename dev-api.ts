@@ -283,7 +283,7 @@ export function devApiPlugin(): Plugin {
 
               const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
               const rows = await db.query(`SELECT id FROM leads ${whereClause}`, fParams);
-              resolvedLeadIds = rows.map((r: { id: number }) => r.id);
+              resolvedLeadIds = rows.map((r: Record<string, number>) => r.id);
             }
 
             if (resolvedLeadIds.length === 0) return json(res, { error: "No lead IDs to add" }, 400);
