@@ -365,13 +365,7 @@ export default function ProspectList() {
                     Headline
                   </th>
                   <th className="py-3 pr-4 text-left text-[11px] font-medium text-gray-400 uppercase tracking-[0.05em]">
-                    Company
-                  </th>
-                  <th className="py-3 pr-4 text-left text-[11px] font-medium text-gray-400 uppercase tracking-[0.05em]">
                     Location
-                  </th>
-                  <th className="py-3 pr-4 text-center text-[11px] font-medium text-gray-400 uppercase tracking-[0.05em]">
-                    Open Profile
                   </th>
                   <th
                     className="py-3 pr-4 text-center text-[11px] font-medium text-gray-400 uppercase tracking-[0.05em] cursor-pointer select-none hover:text-gray-600"
@@ -421,17 +415,11 @@ export default function ProspectList() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 pr-4 text-[13px] text-gray-500 max-w-[260px] truncate">
+                      <td className="py-3.5 pr-4 text-[13px] text-gray-500 max-w-[360px] truncate">
                         {lead.headline || "—"}
                       </td>
-                      <td className="py-3.5 pr-4 text-[13px] text-gray-700 font-medium">
-                        {lead.company || "—"}
-                      </td>
-                      <td className="py-3.5 pr-4 text-[13px] text-gray-500 max-w-[160px] truncate">
+                      <td className="py-3.5 pr-4 text-[13px] text-gray-500 max-w-[200px] truncate">
                         {lead.location || "—"}
-                      </td>
-                      <td className="py-3.5 pr-4 text-center">
-                        <OpenProfileBadge isOpen={lead.isOpenProfile} />
                       </td>
                       <td className="py-3.5 pr-4 text-center">
                         {lead.fitScore != null ? (
