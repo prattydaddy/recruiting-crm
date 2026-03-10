@@ -134,6 +134,8 @@ export default function ProspectList() {
   const [feedbackCounts, setFeedbackCounts] = useState<Record<number, number>>({});
   const [selectAllMatching, setSelectAllMatching] = useState(false);
   const [showCampaignPopup, setShowCampaignPopup] = useState(false);
+  const [bulkEnriching, setBulkEnriching] = useState(false);
+  const [bulkEnrichProgress, setBulkEnrichProgress] = useState("");
   const LIMIT = 50;
 
   // Fetch feedback counts for visible leads
@@ -241,6 +243,44 @@ export default function ProspectList() {
 
   const effectiveSelectedCount = selectAllMatching ? total : selected.size;
 
+  async function handleBulkEnrich() {
+    setBulkEnriching(true);
+    setBulkEnrichProgress("starting...");
+    try {
+      const body: any = {};
+      if (selectAllMatching) {
+        body.filters = {};
+        if (debouncedSearch) body.filters.search = debouncedSearch;
+        if (stageFilter) body.filters.stage = stageFilter;
+        if (scoreFilter) body.filters.score = scoreFilter;
+      } else {
+        body.leadIds = Array.from(selected);
+      }
+
+      setBulkEnrichProgress(`0/${selectAllMatching ? total : selected.size}`);
+
+      const res = await fetch("/api/leads/bulk-enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setBulkEnrichProgress(`✓ ${data.enriched} enriched${data.failed ? `, ${data.failed} failed` : ""}`);
+        // Refresh list to show new scores
+        fetchLeads();
+      } else {
+        setBulkEnrichProgress(`Error: ${data.error}`);
+      }
+    } catch (err: any) {
+      setBulkEnrichProgress(`Error: ${err.message}`);
+    } finally {
+      setBulkEnriching(false);
+      setTimeout(() => setBulkEnrichProgress(""), 5000);
+    }
+  }
+
   async function handleAddToCampaign(campaignId: number) {
     if (selectAllMatching) {
       // Send filters to server so it resolves all matching lead IDs
@@ -333,7 +373,20 @@ export default function ProspectList() {
                 </svg>
                 Add to Sequence
               </button>
-
+              <button
+                onClick={handleBulkEnrich}
+                disabled={bulkEnriching}
+                className={`px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+                  bulkEnriching
+                    ? "bg-amber-100 text-amber-700 cursor-wait"
+                    : "bg-amber-500 text-white hover:bg-amber-600"
+                }`}
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                {bulkEnriching ? `Enriching... ${bulkEnrichProgress}` : "Bulk Enrich"}
+              </button>
             </div>
           )}
 
