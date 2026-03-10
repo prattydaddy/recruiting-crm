@@ -43,6 +43,54 @@ function LinkedInIcon() {
   );
 }
 
+function EnrichButton({ lead, onEnriched }: { lead: Lead; onEnriched: (updated: { id: number; fitScore: number; fitAnalysis: string }) => void }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleEnrich = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = lead.linkedinUrl || lead.salesNavUrl;
+    if (!url) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/leads/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId: lead.id, linkedinUrl: url }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onEnriched({ id: lead.id, fitScore: data.fitScore, fitAnalysis: JSON.stringify(data.fitAnalysis) });
+      } else {
+        console.error("Enrich failed:", data.error);
+      }
+    } catch (err) {
+      console.error("Enrich error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleEnrich}
+      disabled={loading}
+      title="Enrich with AI scoring"
+      className={`p-1 rounded transition-colors ${loading ? "opacity-50 cursor-wait" : "hover:bg-emerald-50 cursor-pointer"}`}
+    >
+      {loading ? (
+        <svg className="w-3.5 h-3.5 text-emerald-500 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 function MoreIcon() {
   return (
     <button
@@ -434,7 +482,7 @@ export default function ProspectList() {
                         <StageBadge stage={lead.stage} />
                       </td>
                       <td className="py-3.5">
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1.5">
                           {lead.linkedinUrl && (
                             <a
                               href={lead.linkedinUrl}
@@ -445,6 +493,9 @@ export default function ProspectList() {
                               <LinkedInIcon />
                             </a>
                           )}
+                          <EnrichButton lead={lead} onEnriched={(updated) => {
+                            setLeads((prev) => prev.map((l) => l.id === updated.id ? { ...l, fitScore: updated.fitScore, fitAnalysis: updated.fitAnalysis } : l));
+                          }} />
                           <MoreIcon />
                         </div>
                       </td>
