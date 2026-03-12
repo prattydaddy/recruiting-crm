@@ -4,6 +4,7 @@ import FilterBar from "./components/FilterBar";
 import KanbanColumn from "./components/KanbanColumn";
 import CandidateCard from "./components/CandidateCard";
 import ProspectList from "./components/ProspectList";
+import TinderView from "./components/TinderView";
 import Unibox from "./components/Unibox";
 import { candidates as fallbackCandidates } from "./data";
 import type { Candidate, Stage } from "./types";
@@ -11,7 +12,7 @@ import { STAGES } from "./types";
 
 const API_BASE = "/api/candidates";
 
-type Tab = "prospecting" | "pipeline" | "unibox";
+type Tab = "prospecting" | "tinder" | "pipeline" | "unibox";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("prospecting");
@@ -112,6 +113,15 @@ export default function App() {
             </svg>
             Prospecting
           </button>
+          <button
+            onClick={() => setActiveTab("tinder")}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${activeTab === "tinder" ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"}`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            Tinder
+          </button>
           {/* Unibox and Pipeline hidden for now */}
         </nav>
       </aside>
@@ -136,6 +146,8 @@ export default function App() {
 
         {activeTab === "unibox" ? (
           <Unibox />
+        ) : activeTab === "tinder" ? (
+          <TinderView />
         ) : activeTab === "prospecting" ? (
           <>
             {/* Prospecting header */}
